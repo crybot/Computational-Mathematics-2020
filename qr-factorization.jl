@@ -76,7 +76,7 @@ $Q_i = \begin{bmatrix}I & 0 \\ 0 & H_i\end{bmatrix},
 \quad H_i = I - 2u_iu_i^T \quad$ With each $u_i$ s.t. 
 
 $H_i R_{i:, i} =
-\begin{bmatrix}\pm||R_{i,i}||, & 0, & \dots, & 0 \end{bmatrix}^T$
+\begin{bmatrix}\pm||R_{i:,i}||, & 0, & \dots, & 0 \end{bmatrix}^T$
 """
 
 # ╔═╡ a963a046-24dc-11eb-320d-156dd4e3b1ce
@@ -144,7 +144,7 @@ Q₁, R₁ = fastqr(A)
 # ╟─189095de-244c-11eb-0fa3-fb19c5de8c71
 # ╟─200b003e-244e-11eb-26d4-d5f39d6dfd5a
 # ╠═5e5ff2ca-2455-11eb-3cde-8537738b7ad7
-# ╠═09bd2ae2-24ed-11eb-03ea-2b38210f576e
+# ╟─09bd2ae2-24ed-11eb-03ea-2b38210f576e
 # ╠═c3b68716-244f-11eb-23dd-0da3d7a623d8
 # ╠═2a752918-2463-11eb-0ec3-73a87f1797c8
 # ╠═6f011278-2465-11eb-2aeb-2b0c1353064f
