@@ -76,7 +76,7 @@ $Q_i = \begin{bmatrix}I & 0 \\ 0 & H_i\end{bmatrix},
 \quad H_i = I - 2u_iu_i^T \quad$ With each $u_i$ s.t. 
 
 $H_i R_{i:, i} =
-\begin{bmatrix}\pm||R_{i:,i}||, & 0, & \dots, & 0 \end{bmatrix}^T$
+\begin{bmatrix}\pm||R_{i:,i}|| \\ 0 \\ 0 \\ \vdots \\ 0 \end{bmatrix}$
 """
 
 # ╔═╡ a963a046-24dc-11eb-320d-156dd4e3b1ce
@@ -88,7 +88,7 @@ function naiveqr(A)
 		H, _ = householder(R[i:end, i])
 		Qi = Matrix{Float64}(I, n, n)
 		Qi[i:end, i:end] = H
-		R = Qi * R
+ 		R = Qi * R
 		Q = Q * Qi
 	end
 	return Q, R
