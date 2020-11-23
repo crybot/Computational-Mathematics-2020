@@ -5,3 +5,6 @@ Julia implementation of the CM course's material
 
 ### Bisection method:
 ![](https://raw.githubusercontent.com/crybot/Computational-Mathematics-2020/main/resources/bisection.gif)
+
+### Quadratic interpolation:
+![](https://raw.githubusercontent.com/crybot/Computational-Mathematics-2020/main/resources/bisection_quadratic.gif)
