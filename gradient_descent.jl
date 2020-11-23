@@ -187,7 +187,7 @@ end
 # ╔═╡ 332b267c-2d9e-11eb-3f09-0f54ae7d6481
 begin
 	# Function to optimize
-	f(x::Vector) = 2x'x
+	f(x::Vector) = 3x'x
 	g(x) = ForwardDiff.gradient(f, x)
 	
 	# Starting point
@@ -294,16 +294,29 @@ function plot_interval(f, a, b; xmin=-1, xmax=6)
 end
 
 # ╔═╡ 6f045826-2da0-11eb-16f7-d7fa4dc1a966
-md"**Slide to see the convergence of the bisection method**"
+md"**Animation speed**"
 
 # ╔═╡ eabfea54-2d9c-11eb-0597-0f60b99032ca
-@bind it html"<input type=range min=0 max=100 step=1/>"
+@bind speed html"<input type=range min=1 max=30 value=1 step=0.5/>"
 
 # ╔═╡ 17722386-2d99-11eb-3aa4-afe95538ced2
 let
 	# it is the value bound to the html input slider (values between 0 and 100)
-	i = floor(Int, 1 + (length(its) - 1)*(it/100))
-	plot_interval(φ, its[i][1], its[i][2], xmin=-2, xmax=ᾱ+2)
+	# i = floor(Int, 1 + (length(its) - 1)*(it/100))
+	# plot_interval(φ, its[i][1], its[i][2], xmin=-2, xmax=ᾱ+2)
+	
+	# @gif for it in its
+		# plot_interval(φ, it[1], it[2], xmin=-2, xmax=ᾱ+2)
+	# end
+	
+	anim = @animate for it in its
+		if abs(it[1] - it[2]) <= 1e-2
+			break
+		end
+		plot_interval(φ, it[1], it[2], xmin=-2, xmax=ᾱ+2)
+	end
+	
+	gif(anim, "anim_fps15.gif", fps = speed)
 end
 
 # ╔═╡ 8cc82752-2a5b-11eb-1068-51a4da9cec9e
@@ -338,7 +351,7 @@ end
 # ╟─44e1536c-2d96-11eb-2807-415965ca6568
 # ╠═1893ca8c-2d97-11eb-3366-0b49c4375551
 # ╠═332b267c-2d9e-11eb-3f09-0f54ae7d6481
-# ╠═e2362cd6-2d9a-11eb-1ab4-0536de884579
+# ╟─e2362cd6-2d9a-11eb-1ab4-0536de884579
 # ╟─6f045826-2da0-11eb-16f7-d7fa4dc1a966
 # ╟─eabfea54-2d9c-11eb-0597-0f60b99032ca
 # ╠═17722386-2d99-11eb-3aa4-afe95538ced2
