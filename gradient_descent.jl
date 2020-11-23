@@ -191,7 +191,7 @@ begin
 	g(x) = ForwardDiff.gradient(f, x)
 	
 	# Starting point
-	x1 = [-2; -1]
+	x1 = [-2; -2]
 	
 	# Normalized gradient (trick!)
 	d = -g(x1) ./ norm(g(x1))
@@ -269,10 +269,9 @@ end
 
 
 # ╔═╡ e2362cd6-2d9a-11eb-1ab4-0536de884579
-function plot_interval(f, a, b; xmin=-1, xmax=6)	
+function plot_interval(f, a, b; xmin=-1, xmax=6, ymin=-10, ymax=25)	
 	# Plot x/y limits
-	ymin = - 10
-	ymax = max(f(a) + 20, f(b) + 20)
+	# ymax = max(f(a) + 20, f(b) + 20)
 	
 	# Plot f(x) 
 	plot(range(xmin, stop=xmax, length=100), f, linecolor=1, legend=false, 
@@ -285,7 +284,6 @@ function plot_interval(f, a, b; xmin=-1, xmax=6)
 	
 	plot!([a, a], [ymin, φ(a)], linecolor=:gray, linewidth=1.5, opacity=0.4)
 	plot!([b, b], [ymin, φ(b)], linecolor=:gray, linewidth=1.5, opacity=0.4)
-
 	
 	# Plot the point ᾱ
 	scatter!([a, b], [f(a), f(b)], color=:green)
@@ -297,7 +295,7 @@ end
 md"**Animation speed**"
 
 # ╔═╡ eabfea54-2d9c-11eb-0597-0f60b99032ca
-@bind speed html"<input type=range min=1 max=30 value=1 step=0.5/>"
+@bind speed html"<input type=range min=1 max=30 value=2 step=0.5/>"
 
 # ╔═╡ 17722386-2d99-11eb-3aa4-afe95538ced2
 let
@@ -313,10 +311,55 @@ let
 		if abs(it[1] - it[2]) <= 1e-2
 			break
 		end
-		plot_interval(φ, it[1], it[2], xmin=-2, xmax=ᾱ+2)
+		plot_interval(φ, it[1], it[2], xmin=-2, xmax=ᾱ+2, ymin=-10, ymax=φ(ᾱ) + 20)
 	end
 	
-	gif(anim, "anim_fps15.gif", fps = speed)
+	gif(anim, "resources/bisection.gif", fps = speed)
+end
+
+# ╔═╡ db6fab1c-2dd7-11eb-0885-89007ba1aec5
+md"#### Quadratic Interpolation"
+
+# ╔═╡ ebd7ccb4-2dd7-11eb-1ea5-df47b1a2c9f0
+md"Quadratic interpolation follows the same algorithmic schema of the bisection method, but instead of restricting the interval using its midpoint, it computes a quadratic interpolation of $\varphi$ between $\alpha_-$ and $\alpha_+$ and then finds its optimal value analitycally."
+
+# ╔═╡ a1d8240a-2dd8-11eb-2484-e9f17c330f30
+function bisection_quadratic(φ, ᾱ, ϵ)
+	α₋ = 0
+	α₊ = ᾱ
+	α = α₊
+	dφ(α) = ForwardDiff.derivative(φ, α)
+	
+	iterates = [(α₋, α₊)]
+	while abs(dφ(α)) > ϵ
+		α = (α₋ * dφ(α₊) - α₊ * dφ(α₋)) / (dφ(α₊) - dφ(α₋))
+		if dφ(α) < 0
+			α₋ = α
+		else
+			α₊ = α
+		end
+		iterates = [iterates; (α₋, α₊)]
+	end
+	
+	return α, iterates
+end
+
+# ╔═╡ 447640ac-2dd9-11eb-0f07-65d7d8118f85
+	_, its2 = bisection_quadratic(φ, ᾱ, 1e-6)
+
+# ╔═╡ b57072c0-2dd9-11eb-12f6-e5343d0cdc86
+md"Since the function we are optimizing is quadratic, $\varphi(\alpha)$ is a quadratic function in one variable. Therefore the computed interpolation provides an exact optimum for the line search in just one iteration:"
+
+# ╔═╡ 134c64ca-2dd9-11eb-027d-e7aeec06dc02
+let
+	anim = @animate for it in its2
+		if abs(it[1] - it[2]) <= 1e-2
+			break
+		end
+		plot_interval(φ, it[1], it[2], xmin=-2, xmax=ᾱ+2, ymin=-10, ymax=φ(ᾱ)+20)
+	end
+	
+	gif(anim, "resources/bisection_quadratic.gif", fps = 0.5)
 end
 
 # ╔═╡ 8cc82752-2a5b-11eb-1068-51a4da9cec9e
@@ -346,13 +389,19 @@ end
 # ╠═421d2d24-2ce0-11eb-08dd-d3b090d7ee84
 # ╠═6a45a812-2cdb-11eb-2216-5fe5bf962451
 # ╟─ae40407e-2d15-11eb-2e90-7b4cf02b475c
-# ╠═e0eb90fa-2cde-11eb-131e-491f17ba4f79
+# ╟─e0eb90fa-2cde-11eb-131e-491f17ba4f79
 # ╟─31360e28-2d96-11eb-12a8-5f99d3c6b24b
 # ╟─44e1536c-2d96-11eb-2807-415965ca6568
 # ╠═1893ca8c-2d97-11eb-3366-0b49c4375551
 # ╠═332b267c-2d9e-11eb-3f09-0f54ae7d6481
-# ╟─e2362cd6-2d9a-11eb-1ab4-0536de884579
+# ╠═e2362cd6-2d9a-11eb-1ab4-0536de884579
 # ╟─6f045826-2da0-11eb-16f7-d7fa4dc1a966
 # ╟─eabfea54-2d9c-11eb-0597-0f60b99032ca
 # ╠═17722386-2d99-11eb-3aa4-afe95538ced2
+# ╟─db6fab1c-2dd7-11eb-0885-89007ba1aec5
+# ╟─ebd7ccb4-2dd7-11eb-1ea5-df47b1a2c9f0
+# ╠═a1d8240a-2dd8-11eb-2484-e9f17c330f30
+# ╠═447640ac-2dd9-11eb-0f07-65d7d8118f85
+# ╟─b57072c0-2dd9-11eb-12f6-e5343d0cdc86
+# ╠═134c64ca-2dd9-11eb-027d-e7aeec06dc02
 # ╟─8cc82752-2a5b-11eb-1068-51a4da9cec9e
