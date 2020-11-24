@@ -109,7 +109,7 @@ x, xs = SDQ(Q, q, x0, eps=1e-6)
 md"**Slide to zoom in**"
 
 # ╔═╡ cce658ba-2a90-11eb-21fb-8f64d3ea0b65
-@bind zoom html"<input type='range' min=-1 max=-0.000001 step=0.00000001>"
+@bind zoom html"<input type='range' min=-1 max=-0.000001 step=0.000001>"
 
 # ╔═╡ 7cbc589e-2a8d-11eb-02b2-2f8915b47e55
 md"#### Analytical solution"
@@ -197,7 +197,7 @@ begin
 	d = -g(x1) ./ norm(g(x1))
 	
 	φ(α) = f(x1 + α*d)
-
+	
 	ᾱ = findinterval(φ, 1e-6)
 	
 	# Return the found alpha along with the incrementally computed intervals
@@ -216,7 +216,7 @@ function plotQ(Q, q; start=-1, stop=1)
 end
 
 # ╔═╡ 9fa8756e-2a6c-11eb-0340-51ba20bf2597
-begin
+let
 	ps = hcat(xs...)
 	plotQ(Q, q, start=zoom, stop=-zoom)
 	plot!(ps[1, :], ps[2, :],
@@ -274,12 +274,12 @@ function plot_interval(f, a, b; xmin=-1, xmax=6, ymin=-10, ymax=25)
 	# ymax = max(f(a) + 20, f(b) + 20)
 	
 	# Plot f(x) 
-	plot(range(xmin, stop=xmax, length=100), f, linecolor=1, legend=false, 
+	plot(range(xmin, stop=xmax, length=500), f, linecolor=1, legend=false, 
 		xlabel="α", ylabel="φ(α)",
 		xlim=(xmin, xmax), ylim=(ymin, ymax))
 	
 	# Plot area under f(x) for x ∈ [a, b]
-	plot!(range(a, stop=b, length=100), f, linecolor=1,
+	plot!(range(a, stop=b, length=500), f, linecolor=1,
 		fill=(ymin, :gray), fillalpha=0.1)
 	
 	plot!([a, a], [ymin, φ(a)], linecolor=:gray, linewidth=1.5, opacity=0.4)
@@ -308,10 +308,10 @@ let
 	# end
 	
 	anim = @animate for it in its
-		if abs(it[1] - it[2]) <= 1e-2
+		if abs(it[1] - it[2]) <= 1e-3
 			break
 		end
-		plot_interval(φ, it[1], it[2], xmin=-2, xmax=ᾱ+2, ymin=-10, ymax=φ(ᾱ) + 20)
+		plot_interval(φ, it[1], it[2], xmin=-2, xmax=ᾱ+2, ymin=-10, ymax=φ(ᾱ)+20)
 	end
 	
 	gif(anim, "resources/bisection.gif", fps = speed)
@@ -324,7 +324,7 @@ md"#### Quadratic Interpolation"
 md"Quadratic interpolation follows the same algorithmic schema of the bisection method, but instead of restricting the interval using its midpoint, it computes a quadratic interpolation of $\varphi$ between $\alpha_-$ and $\alpha_+$ and then finds its optimal value analitycally."
 
 # ╔═╡ a1d8240a-2dd8-11eb-2484-e9f17c330f30
-function bisection_quadratic(φ, ᾱ, ϵ)
+function bisection_quadratic(φ, ᾱ, ϵ, guard=0.01)
 	α₋ = 0
 	α₊ = ᾱ
 	α = α₊
@@ -333,6 +333,7 @@ function bisection_quadratic(φ, ᾱ, ϵ)
 	iterates = [(α₋, α₊)]
 	while abs(dφ(α)) > ϵ
 		α = (α₋ * dφ(α₊) - α₊ * dφ(α₋)) / (dφ(α₊) - dφ(α₋))
+		α = max(α₋ + ( α₊ - α₋) * guard, min(α₊ - ( α₊ - α₋) * guard, α))
 		if dφ(α) < 0
 			α₋ = α
 		else
@@ -345,7 +346,10 @@ function bisection_quadratic(φ, ᾱ, ϵ)
 end
 
 # ╔═╡ 447640ac-2dd9-11eb-0f07-65d7d8118f85
-	_, its2 = bisection_quadratic(φ, ᾱ, 1e-6)
+_, its2 = bisection_quadratic(φ, ᾱ, 1e-6)
+
+# ╔═╡ bd0daa68-2e34-11eb-0b8c-d7089f6b2ebd
+length(its2)
 
 # ╔═╡ b57072c0-2dd9-11eb-12f6-e5343d0cdc86
 md"Since the function we are optimizing is quadratic, $\varphi(\alpha)$ is a quadratic function in one variable. Therefore the computed interpolation provides an exact optimum for the line search in just one iteration:"
@@ -353,13 +357,76 @@ md"Since the function we are optimizing is quadratic, $\varphi(\alpha)$ is a qua
 # ╔═╡ 134c64ca-2dd9-11eb-027d-e7aeec06dc02
 let
 	anim = @animate for it in its2
-		if abs(it[1] - it[2]) <= 1e-2
+		if abs(it[1] - it[2]) <= 1e-3
 			break
 		end
 		plot_interval(φ, it[1], it[2], xmin=-2, xmax=ᾱ+2, ymin=-10, ymax=φ(ᾱ)+20)
 	end
 	
-	gif(anim, "resources/bisection_quadratic.gif", fps = 0.5)
+	gif(anim, "resources/bisection_quadratic.gif", fps = 1)
+end
+
+# ╔═╡ 5b5f6524-2e46-11eb-1106-dd09d18acc40
+md"### Gradient descent for general non-linear functions"
+
+# ╔═╡ 63f3a830-2e46-11eb-1fe1-85c78b99ca05
+function SDG(f, x0, ϵ=1e-6; maxiter=1000)
+	xi = copy(x0)
+	iterates = [xi]
+	g(x) = ForwardDiff.gradient(f, x)
+	
+	for i in 1:maxiter
+		d = -g(xi)
+		if norm(d) <= ϵ return xi, iterates end
+		
+		φ(α) = f(xi + α*d)
+		ᾱ = findinterval(φ, ϵ)
+		α, _ = bisection_quadratic(φ, ᾱ, ϵ)
+		xi = xi + α*d
+		
+		push!(iterates, xi)
+	end
+	
+	return xi, iterates
+end
+
+# ╔═╡ c4872c3e-2e47-11eb-3de9-2d3c080d5fca
+function plotContour(f; start=-1, stop=1)
+	x1 = range(start, stop=stop, length=50)
+	x2 = range(start, stop=stop, length=50)
+	g(x, y) = f([x; y])
+	contour(x1, x2, g, levels=15)
+end
+
+# ╔═╡ 8f4a0f8a-2e49-11eb-2d70-533171b680bf
+opt, its3 = SDG(f, [-1.0; 1.0], 1e-6, maxiter=1000)
+
+# ╔═╡ 1adf7906-2e4d-11eb-2ec8-ff3cdb4ea70c
+length(its3)
+
+# ╔═╡ 5c5220d8-2e4c-11eb-37a4-5b64652960af
+@bind zoom2 html"<input type='range' min=-2 max=-0.000001 step=0.000001>"
+
+# ╔═╡ 7c7ecaea-2e48-11eb-0965-41c60cfb7854
+let
+	lastp = its3[1]
+	plotContour(f, start=zoom2, stop=-zoom2)
+	scatter!(lastp[1:1], lastp[2:2], markersize=3, legend=false, color=:green)
+	
+	anim = @animate for it in its3[2:end]
+		if norm(it - lastp) <= 1e-3
+			break
+		end
+		plot!([lastp[1], it[1]], [lastp[2], it[2]],
+			xlim=(zoom2, -zoom2),
+			ylim=(zoom2, -zoom2),
+			linecolor=:black,
+			linewidth=1)
+		lastp=it
+		scatter!(it[1:1], it[2:2], markersize=3, legend=false, color=:green)
+	end
+	
+	gif(anim, "resources/sdg.gif", fps = 2)
 end
 
 # ╔═╡ 8cc82752-2a5b-11eb-1068-51a4da9cec9e
@@ -371,7 +438,7 @@ end
 # ╟─d94588ec-2919-11eb-0fab-935856446b79
 # ╠═c08080a4-2a50-11eb-29fa-2f9caa2ed92c
 # ╠═b7627e60-2919-11eb-2d47-dd60de41c9f4
-# ╠═bbbc1f6e-2a5b-11eb-2973-ad94e6bdf1f7
+# ╟─bbbc1f6e-2a5b-11eb-2973-ad94e6bdf1f7
 # ╠═966d0346-2a50-11eb-101d-2b7ff589d664
 # ╠═d01b174e-2a56-11eb-219f-f90f121b4e16
 # ╟─996223ac-2a8d-11eb-3471-dd554dced785
@@ -394,7 +461,7 @@ end
 # ╟─44e1536c-2d96-11eb-2807-415965ca6568
 # ╠═1893ca8c-2d97-11eb-3366-0b49c4375551
 # ╠═332b267c-2d9e-11eb-3f09-0f54ae7d6481
-# ╠═e2362cd6-2d9a-11eb-1ab4-0536de884579
+# ╟─e2362cd6-2d9a-11eb-1ab4-0536de884579
 # ╟─6f045826-2da0-11eb-16f7-d7fa4dc1a966
 # ╟─eabfea54-2d9c-11eb-0597-0f60b99032ca
 # ╠═17722386-2d99-11eb-3aa4-afe95538ced2
@@ -402,6 +469,14 @@ end
 # ╟─ebd7ccb4-2dd7-11eb-1ea5-df47b1a2c9f0
 # ╠═a1d8240a-2dd8-11eb-2484-e9f17c330f30
 # ╠═447640ac-2dd9-11eb-0f07-65d7d8118f85
+# ╠═bd0daa68-2e34-11eb-0b8c-d7089f6b2ebd
 # ╟─b57072c0-2dd9-11eb-12f6-e5343d0cdc86
 # ╠═134c64ca-2dd9-11eb-027d-e7aeec06dc02
+# ╟─5b5f6524-2e46-11eb-1106-dd09d18acc40
+# ╠═63f3a830-2e46-11eb-1fe1-85c78b99ca05
+# ╠═c4872c3e-2e47-11eb-3de9-2d3c080d5fca
+# ╠═8f4a0f8a-2e49-11eb-2d70-533171b680bf
+# ╠═1adf7906-2e4d-11eb-2ec8-ff3cdb4ea70c
+# ╟─5c5220d8-2e4c-11eb-37a4-5b64652960af
+# ╠═7c7ecaea-2e48-11eb-0965-41c60cfb7854
 # ╟─8cc82752-2a5b-11eb-1068-51a4da9cec9e
